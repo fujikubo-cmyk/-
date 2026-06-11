@@ -1,6 +1,6 @@
 # スケジュール管理エージェント
 
-Google Apps Script + Claude API + Google Calendar を使ったチャット型スケジュール管理ツールです。
+Google Apps Script + Gemini API + Google Calendar を使ったチャット型スケジュール管理ツールです。
 
 ## 機能
 
@@ -25,7 +25,7 @@ Google Apps Script + Claude API + Google Calendar を使ったチャット型ス
 
 | キー | 値 |
 |------|-----|
-| `CLAUDE_API_KEY` | Anthropic APIキー |
+| `GEMINI_API_KEY` | Google Gemini APIキー |
 | `CALENDAR_ID` | 使用するカレンダーID（省略時は `primary`） |
 
 ### 3. Webアプリとしてデプロイ

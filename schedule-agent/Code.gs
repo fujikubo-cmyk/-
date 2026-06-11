@@ -1,10 +1,10 @@
 // ============================================================
 // スケジュール管理エージェント
-// Google Apps Script + Claude API + Google Calendar
+// Google Apps Script + Gemini API + Google Calendar
 // ============================================================
 
-var PROPS = PropertiesService.getScriptProperties();
-var CLAUDE_API_KEY = PROPS.getProperty('CLAUDE_API_KEY');
+var PROPS          = PropertiesService.getScriptProperties();
+var GEMINI_API_KEY = PROPS.getProperty('GEMINI_API_KEY');
 var CALENDAR_ID    = PROPS.getProperty('CALENDAR_ID') || 'primary';
 
 // ---- Web App エントリポイント ----
@@ -18,7 +18,7 @@ function doGet(e) {
 function processMessage(userMessage, history) {
   try {
     var calendarContext = buildCalendarContext();
-    var response = callClaude(userMessage, history, calendarContext);
+    var response = callGemini(userMessage, history, calendarContext);
     var action = parseAction(response);
 
     if (action) {
@@ -57,13 +57,13 @@ function buildCalendarContext() {
   }
 }
 
-// ---- Claude API 呼び出し ----
-function callClaude(userMessage, history, calendarContext) {
-  if (!CLAUDE_API_KEY) throw new Error('CLAUDE_API_KEY が設定されていません');
+// ---- Gemini API 呼び出し ----
+function callGemini(userMessage, history, calendarContext) {
+  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY が設定されていません');
 
   var systemPrompt =
     'あなたはスケジュール管理アシスタントです。ユーザーの自然な日本語の指示をもとに、カレンダー操作を行います。\n\n' +
-    '以下のアクションが必要な場合、必ずJSON形式で応答してください（マークダウンのコードブロック不要）:\n\n' +
+    '以下のアクションが必要な場合、必ずJSONのみで応答してください（コードブロック・マークダウン・余分な説明は一切不要）:\n\n' +
     '【予定追加】\n' +
     '{"action":"add","title":"タイトル","start":"2024/01/15 14:00","end":"2024/01/15 15:00","description":"メモ（省略可）"}\n\n' +
     '【予定削除】\n' +
@@ -76,37 +76,35 @@ function callClaude(userMessage, history, calendarContext) {
     '今日の日付: ' + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd (E)') + '\n\n' +
     calendarContext;
 
-  var messages = [];
+  // Geminiのhistoryはrole: "user"/"model"
+  var contents = [];
   if (history && history.length > 0) {
     history.slice(-10).forEach(function(h) {
-      messages.push({ role: h.role, content: h.content });
+      var role = (h.role === 'assistant') ? 'model' : h.role;
+      contents.push({ role: role, parts: [{ text: h.content }] });
     });
   }
-  messages.push({ role: 'user', content: userMessage });
+  contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
   var payload = {
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages: messages
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents: contents,
+    generationConfig: { maxOutputTokens: 512 }
   };
 
-  var response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + GEMINI_API_KEY;
+  var response = UrlFetchApp.fetch(url, {
     method: 'post',
-    headers: {
-      'x-api-key': CLAUDE_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json'
-    },
+    contentType: 'application/json',
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   });
 
   var code = response.getResponseCode();
-  if (code !== 200) throw new Error('Claude API エラー: HTTP ' + code);
+  if (code !== 200) throw new Error('Gemini API エラー: HTTP ' + code + ' ' + response.getContentText());
 
   var json = JSON.parse(response.getContentText());
-  return json.content[0].text.trim();
+  return json.candidates[0].content.parts[0].text.trim();
 }
 
 // ---- Claudeの応答からアクションJSONをパース ----
@@ -214,7 +212,7 @@ function parseDate(str) {
 
 // ---- セットアップ確認（デバッグ用） ----
 function checkSetup() {
-  Logger.log('CLAUDE_API_KEY: ' + (CLAUDE_API_KEY ? '設定済み' : '未設定'));
+  Logger.log('GEMINI_API_KEY: ' + (GEMINI_API_KEY ? '設定済み' : '未設定'));
   Logger.log('CALENDAR_ID: ' + CALENDAR_ID);
   Logger.log(buildCalendarContext());
 }
