@@ -116,41 +116,35 @@ function convertExcelToSheetData(blob, fileName) {
   return text.length > 5000 ? text.substring(0, 5000) + '\n...(省略)' : text;
 }
 
-// ---- Claude APIで要約 ----
+// ---- Gemini APIで要約 ----
 function summarizeWithClaude(sheetData, fileName) {
-  var apiKey = PROPS.getProperty('CLAUDE_API_KEY');
-  if (!apiKey) throw new Error('CLAUDE_API_KEY が設定されていません');
+  var apiKey = PROPS.getProperty('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('GEMINI_API_KEY が設定されていません');
 
-  var prompt = [
-    '以下は「' + fileName + '」という資金繰り表のデータです。',
-    '日付・入金・出金・残高などの情報から、経営者が知るべき重要ポイントを日本語で箇条書き（3〜5点）にまとめてください。',
-    '特に【資金不足リスク】【大きな入出金】【残高の最低値と日付】を含めてください。',
-    '',
-    sheetData
-  ].join('\n');
+  var prompt =
+    '以下は「' + fileName + '」という資金繰り表のデータです。\n' +
+    '日付・入金・出金・残高などの情報から、経営者が知るべき重要ポイントを日本語で箇条書き（3〜5点）にまとめてください。\n' +
+    '特に【資金不足リスク】【大きな入出金】【残高の最低値と日付】を含めてください。\n\n' +
+    sheetData;
 
   var payload = {
-    model: 'claude-haiku-4-5',
-    max_tokens: 512,
-    messages: [{ role: 'user', content: prompt }]
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { maxOutputTokens: 512 }
   };
 
-  var response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey;
+  var response = UrlFetchApp.fetch(url, {
     method: 'post',
     contentType: 'application/json',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    },
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   });
 
   var code = response.getResponseCode();
-  if (code !== 200) throw new Error('Claude API エラー: HTTP ' + code + ' ' + response.getContentText());
+  if (code !== 200) throw new Error('Gemini API エラー: HTTP ' + code + ' ' + response.getContentText());
 
   var json = JSON.parse(response.getContentText());
-  return json.content[0].text.trim();
+  return json.candidates[0].content.parts[0].text.trim();
 }
 
 // ---- スプレッドシートからKPI数値を抽出（簡易版） ----
