@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スケジュール管理エージェント</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+    background: #f0f2f5;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ヘッダー */
+  .header {
+    background: linear-gradient(135deg, #1a73e8, #0f4c81);
+    color: #fff;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+  }
+  .header-icon { font-size: 28px; }
+  .header-info h1 { font-size: 18px; font-weight: 700; }
+  .header-info p  { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+
+  /* チャットエリア */
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* バブル共通 */
+  .bubble-wrap {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 85%;
+  }
+  .bubble-wrap.user  { align-self: flex-end; flex-direction: row-reverse; }
+  .bubble-wrap.agent { align-self: flex-start; }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .bubble-wrap.agent .avatar { background: #1a73e8; }
+  .bubble-wrap.user  .avatar { background: #34a853; }
+
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 18px;
+    line-height: 1.6;
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .bubble-wrap.user  .bubble { background: #1a73e8; color: #fff; border-bottom-right-radius: 4px; }
+  .bubble-wrap.agent .bubble { background: #fff; color: #333; border-bottom-left-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+  .timestamp {
+    font-size: 10px;
+    color: #999;
+    margin: 0 8px 2px;
+    align-self: flex-end;
+  }
+
+  /* タイピングインジケーター */
+  .typing-indicator { display: flex; gap: 4px; padding: 8px 4px; }
+  .typing-indicator span {
+    width: 8px; height: 8px;
+    background: #aaa;
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-8px); }
+  }
+
+  /* イベントカード */
+  .event-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .event-card {
+    background: #f0f6ff;
+    border-left: 3px solid #1a73e8;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .event-card .ev-title { font-weight: 700; color: #0f4c81; }
+  .event-card .ev-time  { color: #555; font-size: 12px; margin-top: 2px; }
+  .event-card .ev-id    { color: #aaa; font-size: 10px; margin-top: 4px; font-family: monospace; }
+
+  /* クイックアクション */
+  .quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    flex-shrink: 0;
+  }
+  .quick-btn {
+    background: #e8f0fe;
+    color: #1a73e8;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .quick-btn:hover { background: #c5d9fa; }
+
+  /* 入力エリア */
+  .input-area {
+    background: #fff;
+    padding: 12px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    border-top: 1px solid #e5e7eb;
+    flex-shrink: 0;
+  }
+  #msg {
+    flex: 1;
+    border: 1.5px solid #d1d5db;
+    border-radius: 24px;
+    padding: 10px 16px;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+    line-height: 1.5;
+    max-height: 120px;
+    transition: border-color 0.2s;
+  }
+  #msg:focus { border-color: #1a73e8; }
+  #send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  #send-btn:hover   { background: #1558b0; }
+  #send-btn:disabled { background: #c0cfe8; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📅</div>
+  <div class="header-info">
+    <h1>スケジュール管理エージェント</h1>
+    <p>Googleカレンダー連携 · AI自然言語処理</p>
+  </div>
+</div>
+
+<div id="chat"></div>
+
+<div class="quick-actions">
+  <button class="quick-btn" onclick="quickSend('今日の予定を教えて')">今日の予定</button>
+  <button class="quick-btn" onclick="quickSend('今週の予定を見せて')">今週の予定</button>
+  <button class="quick-btn" onclick="quickSend('明日の前後3日間の予定を確認したい')">前後の予定</button>
+  <button class="quick-btn" onclick="quickSend('明日14時から15時まで「チームMTG」を追加して')">予定を追加</button>
+  <button class="quick-btn" onclick="quickSend('来月の予定を一覧表示して')">来月の予定</button>
+</div>
+
+<div class="input-area">
+  <textarea id="msg" rows="1" placeholder="例: 明日15時から1時間、会議を追加して" oninput="autoResize(this)"></textarea>
+  <button id="send-btn" onclick="sendMessage()">➤</button>
+</div>
+
+<script>
+  var history = [];
+  var isLoading = false;
+
+  // 初期メッセージ
+  window.onload = function() {
+    addBubble('agent',
+      '👋 こんにちは！スケジュール管理エージェントです。\n\n' +
+      'Googleカレンダーと連携して、予定の追加・削除・確認ができます。\n\n' +
+      '例えばこんなことができます：\n' +
+      '• 「明日14時から会議を追加して」\n' +
+      '• 「今週の予定を教えて」\n' +
+      '• 「〇〇の予定を削除して」\n' +
+      '• 「来週月曜の前後の予定を見せて」\n\n' +
+      'お気軽に話しかけてください！'
+    );
+  };
+
+  function quickSend(text) {
+    document.getElementById('msg').value = text;
+    sendMessage();
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function sendMessage() {
+    if (isLoading) return;
+    var msg = document.getElementById('msg').value.trim();
+    if (!msg) return;
+
+    document.getElementById('msg').value = '';
+    document.getElementById('msg').style.height = 'auto';
+    addBubble('user', msg);
+    history.push({ role: 'user', content: msg });
+
+    showTyping();
+    isLoading = true;
+    document.getElementById('send-btn').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        hideTyping();
+        isLoading = false;
+        document.getElementById('send-btn').disabled = false;
+        addBubble('agent', res.reply, res.events);
+        history.push({ role: 'assistant', content: res.reply });
+        if (history.length > 20) history = history.slice(-20);
+      })
+      .withFailureHandler(function(err) {
+        hideTyping();
+        isLoading = false;
+        document.getElementById('send-btn').disabled = false;
+        addBubble('agent', '⚠️ エラーが発生しました: ' + err.message);
+      })
+      .processMessage(msg, history);
+  }
+
+  function addBubble(role, text, events) {
+    var chat = document.getElementById('chat');
+    var wrap = document.createElement('div');
+    wrap.className = 'bubble-wrap ' + role;
+
+    var avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = role === 'agent' ? '🤖' : '👤';
+
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+
+    // イベントカード表示
+    if (events && events.length > 0) {
+      var cards = document.createElement('div');
+      cards.className = 'event-cards';
+      events.forEach(function(ev) {
+        var card = document.createElement('div');
+        card.className = 'event-card';
+        card.innerHTML =
+          '<div class="ev-title">📌 ' + escHtml(ev.title) + '</div>' +
+          '<div class="ev-time">🕐 ' + escHtml(ev.start) + (ev.end ? '〜' + escHtml(ev.end) : '') + '</div>' +
+          (ev.id ? '<div class="ev-id">ID: ' + escHtml(ev.id) + '</div>' : '');
+        cards.appendChild(card);
+      });
+      bubble.appendChild(cards);
+    }
+
+    var ts = document.createElement('div');
+    ts.className = 'timestamp';
+    ts.textContent = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+    if (role === 'user') {
+      wrap.appendChild(ts);
+      wrap.appendChild(bubble);
+      wrap.appendChild(avatar);
+    } else {
+      wrap.appendChild(avatar);
+      wrap.appendChild(bubble);
+      wrap.appendChild(ts);
+    }
+
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  var typingEl = null;
+  function showTyping() {
+    var chat = document.getElementById('chat');
+    var wrap = document.createElement('div');
+    wrap.className = 'bubble-wrap agent';
+    wrap.id = 'typing-wrap';
+
+    var avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = '🤖';
+
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+
+    wrap.appendChild(avatar);
+    wrap.appendChild(bubble);
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function hideTyping() {
+    var el = document.getElementById('typing-wrap');
+    if (el) el.remove();
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Enterキーで送信（Shift+Enterは改行）
+  document.getElementById('msg').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+</script>
+</body>
+</html>
