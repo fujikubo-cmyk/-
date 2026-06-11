@@ -197,70 +197,65 @@ function sendEmailReport(items) {
       return '<li style="margin:6px 0;line-height:1.6;">' + escapeHtml(line.replace(/^[-・•]\s*/, '')) + '</li>';
     }).join('');
 
-    return [
-      '<div style="background:#fff;border-radius:12px;padding:20px 24px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">',
-        '<table style="width:100%;border-collapse:collapse;">',
-          '<tr>',
-            '<td style="padding:4px 0;font-size:13px;color:#888;width:80px;">件名</td>',
-            '<td style="padding:4px 0;font-size:13px;color:#333;">' + escapeHtml(item.subject) + '</td>',
-          '</tr>',
-          '<tr>',
-            '<td style="padding:4px 0;font-size:13px;color:#888;">送信者</td>',
-            '<td style="padding:4px 0;font-size:13px;color:#333;">' + escapeHtml(item.from) + '</td>',
-          '</tr>',
-          '<tr>',
-            '<td style="padding:4px 0;font-size:13px;color:#888;">日時</td>',
-            '<td style="padding:4px 0;font-size:13px;color:#333;">' + item.date + '</td>',
-          '</tr>',
-          '<tr>',
-            '<td style="padding:4px 0;font-size:13px;color:#888;">ファイル</td>',
-            '<td style="padding:4px 0;font-size:13px;color:#0f4c81;">📎 ' + escapeHtml(item.fileName) + '</td>',
-          '</tr>',
-        '</table>',
-        kpiHtml,
-        '<div style="margin-top:16px;padding:16px;background:#f0f6ff;border-left:4px solid #0f4c81;border-radius:0 8px 8px 0;">',
-          '<div style="font-size:12px;font-weight:700;color:#0f4c81;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">AI 要約（Claude）</div>',
-          '<ul style="margin:0;padding-left:18px;color:#333;font-size:14px;">' + summaryLines + '</ul>',
-        '</div>',
-      '</div>'
-    ].join('');
+    return '<div style="background:#fff;border-radius:12px;padding:20px 24px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
+      '<table style="width:100%;border-collapse:collapse;">' +
+        '<tr>' +
+          '<td style="padding:4px 0;font-size:13px;color:#888;width:80px;">件名</td>' +
+          '<td style="padding:4px 0;font-size:13px;color:#333;">' + escapeHtml(item.subject) + '</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td style="padding:4px 0;font-size:13px;color:#888;">送信者</td>' +
+          '<td style="padding:4px 0;font-size:13px;color:#333;">' + escapeHtml(item.from) + '</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td style="padding:4px 0;font-size:13px;color:#888;">日時</td>' +
+          '<td style="padding:4px 0;font-size:13px;color:#333;">' + item.date + '</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td style="padding:4px 0;font-size:13px;color:#888;">ファイル</td>' +
+          '<td style="padding:4px 0;font-size:13px;color:#0f4c81;">&#128206; ' + escapeHtml(item.fileName) + '</td>' +
+        '</tr>' +
+      '</table>' +
+      kpiHtml +
+      '<div style="margin-top:16px;padding:16px;background:#f0f6ff;border-left:4px solid #0f4c81;border-radius:0 8px 8px 0;">' +
+        '<div style="font-size:12px;font-weight:700;color:#0f4c81;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">AI 要約（Claude）</div>' +
+        '<ul style="margin:0;padding-left:18px;color:#333;font-size:14px;">' + summaryLines + '</ul>' +
+      '</div>' +
+    '</div>';
   }).join('');
 
-  var html = [
-    '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>',
-    '<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;background:#f5f7fa;">',
-      '<div style="max-width:680px;margin:0 auto;padding:24px 16px;">',
+  var header =
+    '<div style="background:linear-gradient(135deg,#0f4c81 0%,#1a73e8 100%);border-radius:16px;padding:32px 28px;margin-bottom:24px;color:#fff;">' +
+      '<div style="font-size:11px;font-weight:600;letter-spacing:2px;opacity:0.7;margin-bottom:8px;">DAILY REPORT</div>' +
+      '<div style="font-size:24px;font-weight:700;margin-bottom:4px;">💴 資金繰りレポート</div>' +
+      '<div style="font-size:14px;opacity:0.85;">' + today + '&nbsp;&nbsp;|&nbsp;&nbsp;' + items.length + '件のファイルを処理</div>' +
+    '</div>';
 
-        // ヘッダー
-        '<div style="background:linear-gradient(135deg,#0f4c81 0%,#1a73e8 100%);border-radius:16px;padding:32px 28px;margin-bottom:24px;color:#fff;">',
-          '<div style="font-size:11px;font-weight:600;letter-spacing:2px;opacity:0.7;margin-bottom:8px;">DAILY REPORT</div>',
-          '<div style="font-size:24px;font-weight:700;margin-bottom:4px;">💴 資金繰りレポート</div>',
-          '<div style="font-size:14px;opacity:0.85;">' + today + '  |  ' + items.length + '件のファイルを処理</div>',
-        '</div>',
+  var footer =
+    '<div style="text-align:center;padding:20px 0;font-size:12px;color:#aaa;">' +
+      '自動生成 by Google Apps Script + Claude AI<br>' +
+      '&copy; ' + new Date().getFullYear() + ' 経理レポートシステム' +
+    '</div>';
 
-        // 各アイテム
-        itemsHtml,
-
-        // フッター
-        '<div style="text-align:center;padding:20px 0;font-size:12px;color:#aaa;">',
-          '自動生成 by Google Apps Script + Claude AI<br>',
-          '© ' + new Date().getFullYear() + ' 経理レポートシステム',
-        '</div>',
-      '</div>',
-    '</body></html>'
-  ].join('');
+  var html =
+    '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>' +
+    '<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;background:#f5f7fa;">' +
+      '<div style="max-width:680px;margin:0 auto;padding:24px 16px;">' +
+        header +
+        itemsHtml +
+        footer +
+      '</div>' +
+    '</body></html>';
 
   GmailApp.sendEmail(email, subject, '※このメールはHTML形式です', { htmlBody: html });
   Logger.log('メール送信完了: ' + email);
 }
 
 function kpiCard(label, value, color) {
-  return [
-    '<div style="flex:1;min-width:140px;background:' + color + ';color:#fff;border-radius:10px;padding:14px 16px;">',
-      '<div style="font-size:11px;opacity:0.8;margin-bottom:4px;">' + label + '</div>',
-      '<div style="font-size:18px;font-weight:700;">' + value + '</div>',
-    '</div>'
-  ].join('');
+  return '<div style="flex:1;min-width:140px;background:' + color + ';color:#fff;border-radius:10px;padding:14px 16px;">' +
+    '<div style="font-size:11px;opacity:0.8;margin-bottom:4px;">' + label + '</div>' +
+    '<div style="font-size:18px;font-weight:700;">' + value + '</div>' +
+    '</div>';
 }
 
 function escapeHtml(str) {
