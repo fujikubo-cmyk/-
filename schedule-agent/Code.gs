@@ -80,11 +80,13 @@ function callGemini(userMessage, history, calendarContext) {
   var contents = [];
   if (history && history.length > 0) {
     history.slice(-10).forEach(function(h) {
+      var text = String(h.content || '');
+      if (!text) return;
       var role = (h.role === 'assistant') ? 'model' : h.role;
-      contents.push({ role: role, parts: [{ text: h.content }] });
+      contents.push({ role: role, parts: [{ text: text }] });
     });
   }
-  contents.push({ role: 'user', parts: [{ text: userMessage }] });
+  contents.push({ role: 'user', parts: [{ text: String(userMessage || '') }] });
 
   var payload = {
     systemInstruction: { parts: [{ text: systemPrompt }] },
